@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace People_database
@@ -39,21 +40,8 @@ namespace People_database
             return person;
         }
     }
-
-    public class PeopleList
-    {
-    }
-
-
     internal static class Program
     {
-        
-        //Console.Write(File.ReadAllText(path));
-        //var jsontxt = File.ReadAllText(path);
-        //JsonSerializerOptions options = new() {WriteIndented = true};
-        //string jsonString = JsonSerializer.Serialize(testlist, options);
-        //File.WriteAllText(path, jsonString);
-        
         private static void CommandListener()
         {
             string path = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
@@ -67,10 +55,9 @@ namespace People_database
             if( new FileInfo(fullpath).Length != 0 )
             {
                 var jsontxt = File.ReadAllText(fullpath);
-                var myList = JsonSerializer.Deserialize<List<Person>>(jsontxt);
-                people.AddRange(myList);
+                var existingPeople = JsonSerializer.Deserialize<List<Person>>(jsontxt);
+                people.AddRange(existingPeople);
             }
-            
             while(true)
             {
                 string command = Console.ReadLine();
@@ -99,6 +86,28 @@ namespace People_database
                         people.Add(obj.AddPerson());
                     }
                 }
+                else if (strlist[0] == "list") // TODO Fix Unhandled exception when given no arguments
+                {
+                    if (strlist.Length > 2)
+                    {
+                        Console.WriteLine("Error: Too many arguments");
+                    }
+                    else if (strlist.Length <= 0)
+                    {
+                        Console.WriteLine("Error: Too few arguments");
+                    }
+                    else
+                    {
+                        switch (strlist[1])
+                        {
+                            case "all":
+                                Console.Write(people.ToArray()); //TODO Make it list all values of the objects 
+                                break;
+                            case "existing":
+                                break;
+                        }
+                    }
+                }
                 else if (strlist[0] == "commit")
                 {
                     JsonSerializerOptions options = new() {WriteIndented = true};
@@ -109,7 +118,6 @@ namespace People_database
                 {
                     break;
                 }
-                
             }
         }
         private static void Main(string[] args)
@@ -117,5 +125,4 @@ namespace People_database
             CommandListener();
         }
     }
-
 }
