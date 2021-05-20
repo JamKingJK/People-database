@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 
 namespace People_database
 {
@@ -39,29 +40,42 @@ namespace People_database
         }
     }
 
+    public class PeopleList
+    {
+    }
+
 
     internal static class Program
     {
-        private static void StartupPrep()
-        {
-            //Console.Write(File.ReadAllText(path));
-            //var jsontxt = File.ReadAllText(path);
-            //JsonSerializerOptions options = new() {WriteIndented = true};
-            //string jsonString = JsonSerializer.Serialize(testlist, options);
-            //File.WriteAllText(path, jsonString);
-        }
+        
+        //Console.Write(File.ReadAllText(path));
+        //var jsontxt = File.ReadAllText(path);
+        //JsonSerializerOptions options = new() {WriteIndented = true};
+        //string jsonString = JsonSerializer.Serialize(testlist, options);
+        //File.WriteAllText(path, jsonString);
+        
         private static void CommandListener()
         {
-            const string path = @"C:\Users\Kacper\RiderProjects\ConsoleApp1\ConsoleApp1\database.json"; //temp path
-            string jsontxt = File.ReadAllText(path);
-            
-            // TODO Add deserializing json file to a list
-            
+            string path = System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+            const string filename = "\\database.json";
+            string fullpath = path + filename;
+            using (var sw = (File.Exists(fullpath)) ? File.AppendText(fullpath) : File.CreateText(fullpath))                 
+            {
+                Console.WriteLine("Database location: " + fullpath);
+            } 
             List<Person> people = new List<Person>();
+            if( new FileInfo(fullpath).Length != 0 )
+            {
+                var jsontxt = File.ReadAllText(fullpath);
+                var myList = JsonSerializer.Deserialize<List<Person>>(jsontxt);
+                people.AddRange(myList);
+            }
+            
             while(true)
             {
                 string command = Console.ReadLine();
-                String[] strlist = command.Split(" ");
+                if (command == null) continue;
+                string[] strlist = command.Split(" ");
                 if (strlist[0] == "help")
                 {
                     if (strlist.Length > 1)
@@ -85,10 +99,17 @@ namespace People_database
                         people.Add(obj.AddPerson());
                     }
                 }
+                else if (strlist[0] == "commit")
+                {
+                    JsonSerializerOptions options = new() {WriteIndented = true};
+                    string jsonString = JsonSerializer.Serialize(people, options);
+                    File.WriteAllText(fullpath, jsonString);
+                }
                 else if (strlist[0] == "exit")
                 {
                     break;
                 }
+                
             }
         }
         private static void Main(string[] args)
