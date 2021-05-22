@@ -118,6 +118,7 @@ namespace People_database
                         Console.WriteLine("list         Lists all entries in currently in the database");
                         Console.WriteLine("commit       Finalizes all changes and applies them to the database");
                         Console.WriteLine("discard      Discards all pending changes to the database");
+                        Console.WriteLine("exit         Exits the application");
                     }
                 }
                 else if (strlist[0] == "add")
