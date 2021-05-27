@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "People-database", "People-database\People-database.csproj", "{2F31C101-60F3-45A5-9099-38E276D7CAA3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PeopleDatabase", "PeopleDatabase\PeopleDatabase.csproj", "{2F31C101-60F3-45A5-9099-38E276D7CAA3}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
