@@ -32,32 +32,6 @@ namespace PeopleDatabase
     }
     public static class PersonExtensions
     {
-        public static Person AddPerson(this Person p)
-
-        {
-            string id = Guid.NewGuid().ToString();
-            Console.Write("Enter first name: ");
-            string fn = Console.ReadLine() ?? string.Empty;;
-            Console.Write("Enter last name: ");
-            string ln = Console.ReadLine() ?? string.Empty;;
-            Console.Write("Enter personal ID: ");
-            string personalId = Console.ReadLine() ?? string.Empty;;
-            Console.Write("Enter date of birth: ");
-            string date = Console.ReadLine() ?? string.Empty;
-            Console.Write("Enter sex: ");
-            string sex = Console.ReadLine() ?? string.Empty;
-            Person person = new()
-            {
-                Id = id,
-                FirstName = fn,
-                LastName = ln,
-                PersonalId = personalId,
-                DateOfBirth = DateTimeOffset.Parse(date),
-                Sex = Enum.Parse<Sex>(sex),
-            };
-            return person;
-        }
-
         public static Person SetFirstName(this Person p)
         {
             Console.Write("Enter new first name: ");
@@ -96,6 +70,45 @@ namespace PeopleDatabase
     }
     internal static class Program
     {
+        private static void PrintHelp()
+        {
+            Console.WriteLine("\nAvailable commands:");
+            Console.WriteLine("add          Adds a new entry into the database");
+            Console.WriteLine("edit         Modifies an entry by given ID");
+            Console.WriteLine("delete       Removes an entry by given ID");
+            Console.WriteLine("list         Lists all entries in currently in the database");
+            Console.WriteLine("commit       Finalizes all changes and applies them to the database");
+            Console.WriteLine("discard      Discards all pending changes to the database");
+            Console.WriteLine("exit         Exits the application");
+        }
+
+        private static void AddPatient(List<Person> people)
+        {
+            string firstName = GetUserInput("Enter first name: ");
+            string lastName = GetUserInput("Enter last name: ");
+            string personalId = GetUserInput("Enter personal ID: ");
+            string dateString = GetUserInput("Enter date of birth: ");
+            string sexString = GetUserInput("Enter sex: ");
+
+            var person = new Person
+            {
+                Id = Guid.NewGuid().ToString(),
+                FirstName = firstName,
+                LastName = lastName,
+                PersonalId = personalId,
+                DateOfBirth = DateTimeOffset.Parse(dateString),
+                Sex = Enum.Parse<Sex>(sexString),
+            };
+            
+            people.Add(person);
+        }
+
+        private static string GetUserInput(string prompt)
+        {
+            Console.Write(prompt);
+            return Console.ReadLine() ?? string.Empty;
+        }
+
         private static void Main()
         {
             string applicationDataPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -117,139 +130,138 @@ namespace PeopleDatabase
                 if (command == null) continue;
                 
                 string[] args = command.Split(" ");
-                if (args[0] == "help")
+                switch (args[0])
                 {
-                    if (args.Length > 1)
-                    {
-                        Console.WriteLine("Error: Too many arguments");
-                    }
-                    else
-                    {
-                        Console.WriteLine("\nAvailable commands:");
-                        Console.WriteLine("add          Adds a new entry into the database");
-                        Console.WriteLine("edit         Modifies an entry by given ID");
-                        Console.WriteLine("delete       Removes an entry by given ID");
-                        Console.WriteLine("list         Lists all entries in currently in the database");
-                        Console.WriteLine("commit       Finalizes all changes and applies them to the database");
-                        Console.WriteLine("discard      Discards all pending changes to the database");
-                        Console.WriteLine("exit         Exits the application");
-                    }
+                    case "add":
+                        AddPatient(people);
+                        break;
+                    case "list":
+                        ListPatients(args, databaseFileContent);
+                        break;
+                    case "edit":
+                        EditPatient(args, people);
+                        break;
+                    case "delete":
+                        DeletePatient(args, people);
+                        break;
+                    case "commit":
+                        databaseFileContent = CommitChanges(people, databaseFilePath);
+                        break;
+                    case "discard":
+                        people = DiscardChanges(databaseFileContent);
+                        break;
+                    case "exit":
+                        return;
+                    default:
+                        Console.WriteLine($"Unknown option: {args[0]}");
+                        goto case "help";
+                    case "help":
+                        PrintHelp();
+                        break;
                 }
-                else if (args[0] == "add")
+            }
+        }
+
+        private static List<Person> DiscardChanges(string databaseFileContent)
+        {
+            return JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
+        }
+
+        private static string CommitChanges(List<Person>? people, string databaseFilePath)
+        {
+            JsonSerializerOptions options = new() {WriteIndented = true};
+            string databaseFileContent = JsonSerializer.Serialize(people, options);
+            File.WriteAllText(databaseFilePath, contents: databaseFileContent);
+            return databaseFileContent;
+        }
+
+        private static void DeletePatient(string[] args, List<Person> people)
+        {
+            if (args.Length == 2)
+            {
+                string guid = args[1];
+                Person? personToDelete = people.SingleOrDefault(person => person.Id == guid);
+                if (personToDelete == null)
                 {
-                    if (args.Length > 1)
-                    {
-                        Console.WriteLine("Error: Too many arguments");
-                    }
-                    else
-                    {
-                        Person obj = new();
-                        people.Add(obj.AddPerson());
-                    }
+                    Console.WriteLine("Error: Incorrect ID");
                 }
-                else if (args[0] == "list")
+                else
                 {
-                    if (args.Length > 1)
-                    {
-                        
-                        Console.WriteLine("Error: Too many arguments");
-                    }
-                    else
-                    {
-                        var originalPeople = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
-                        foreach (var person in originalPeople)
-                        {
-                            Console.WriteLine($"\nID: {person.Id}");
-                            Console.WriteLine($"First name: {person.FirstName}");
-                            Console.WriteLine($"Last name: {person.LastName}");
-                            Console.WriteLine($"Personal ID: {person.PersonalId}");
-                            Console.WriteLine($"Date of birth: {person.DateOfBirth:d}");
-                            Console.WriteLine($"Sex: {person.Sex}");
-                        }
-                    }
+                    people.Remove(personToDelete);
+                    Console.WriteLine($"Entry with ID {personToDelete.Id} was removed.");
                 }
-                else if (args[0] == "edit")
+            }
+            else
+            {
+                Console.WriteLine("Error: ID not specified or too many arguments passed");
+            }
+        }
+
+        private static void EditPatient(string[] args, List<Person> people)
+        {
+            if (args.Length == 2)
+            {
+                string guid = args[1];
+                Person? personToEdit = people.FirstOrDefault(person => person.Id == guid);
+                if (personToEdit == null)
                 {
-                    if (args.Length == 2)
-                    {
-                        string guid = args[1];
-                        Person? personToEdit = people.FirstOrDefault(person => person.Id == guid);
-                        if (personToEdit == null)
-                        {
-                            Console.WriteLine("Error: Incorrect ID");
-                            continue;
-                        }
-                        
-                        Console.WriteLine("Which attribute do you want to edit?");
-                        Console.WriteLine("First name (fname)");
-                        Console.WriteLine("Last name (lname)");
-                        Console.WriteLine("Personal ID (pid)");
-                        Console.WriteLine("Date of birth (dob)");
-                        Console.WriteLine("Sex (sex)");
-                        Console.Write(">");
-                        string choice = Console.ReadLine()?.ToUpper() ?? string.Empty;
-                        switch (choice)
-                        {
-                            case "FNAME":
-                                personToEdit.SetFirstName();
-                                break;
-                            case "LNAME":
-                                personToEdit.SetLastName();
-                                break;
-                            case "PID":
-                                personToEdit.SetPersonalId();
-                                break;
-                            case "DOB":
-                                personToEdit.SetDateOfBirth();
-                                break;
-                            case "SEX":
-                                personToEdit.SetSex();
-                                break;
-                            default:
-                                Console.WriteLine("Error: Incorrect attribute name");
-                                break;
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Error: ID not specified or too many arguments passed");
-                    }
+                    Console.WriteLine("Error: Incorrect ID");
+                    return;
                 }
-                else if (args[0] == "delete")
+
+                Console.WriteLine("Which attribute do you want to edit?");
+                Console.WriteLine("First name (fname)");
+                Console.WriteLine("Last name (lname)");
+                Console.WriteLine("Personal ID (pid)");
+                Console.WriteLine("Date of birth (dob)");
+                Console.WriteLine("Sex (sex)");
+                Console.Write(">");
+                string choice = Console.ReadLine()?.ToUpper() ?? string.Empty;
+                switch (choice)
                 {
-                    if (args.Length == 2)
-                    {
-                        string guid = args[1];
-                        Person? personToDelete = people.SingleOrDefault(person => person.Id == guid);
-                        if (personToDelete == null)
-                        {
-                            Console.WriteLine("Error: Incorrect ID");
-                        }
-                        else
-                        {
-                            people.Remove(personToDelete);
-                            Console.WriteLine($"Entry with ID {personToDelete.Id} was removed.");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("Error: ID not specified or too many arguments passed");
-                    }
+                    case "FNAME":
+                        personToEdit.SetFirstName();
+                        break;
+                    case "LNAME":
+                        personToEdit.SetLastName();
+                        break;
+                    case "PID":
+                        personToEdit.SetPersonalId();
+                        break;
+                    case "DOB":
+                        personToEdit.SetDateOfBirth();
+                        break;
+                    case "SEX":
+                        personToEdit.SetSex();
+                        break;
+                    default:
+                        Console.WriteLine("Error: Incorrect attribute name");
+                        break;
                 }
-                else if (args[0] == "commit")
-                {
-                    JsonSerializerOptions options = new() { WriteIndented = true };
-                    databaseFileContent = JsonSerializer.Serialize(people, options);
-                    File.WriteAllText(databaseFilePath, contents: databaseFileContent);
-                }
-                else if (args[0] == "discard")
-                {
-                    people = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
-                }
-                else if (args[0] == "exit")
-                {
-                    break;
-                }
+            }
+            else
+            {
+                Console.WriteLine("Error: ID not specified or too many arguments passed");
+            }
+        }
+
+        private static void ListPatients(string[] args, string databaseFileContent)
+        {
+            if (args.Length > 1)
+            {
+                Console.WriteLine("Error: Too many arguments");
+                return;
+            }
+            
+            var originalPeople = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
+            foreach (var person in originalPeople)
+            {
+                Console.WriteLine($"\nID: {person.Id}");
+                Console.WriteLine($"First name: {person.FirstName}");
+                Console.WriteLine($"Last name: {person.LastName}");
+                Console.WriteLine($"Personal ID: {person.PersonalId}");
+                Console.WriteLine($"Date of birth: {person.DateOfBirth:d}");
+                Console.WriteLine($"Sex: {person.Sex}");
             }
         }
     }
