@@ -82,7 +82,7 @@ namespace PeopleDatabase
             Console.WriteLine("exit         Exits the application");
         }
 
-        private static void AddPatient(List<Person> people)
+        private static void AddPatient(List<Person> peopleTemporary)
         {
             string firstName = GetUserInput("Enter first name: ");
             string lastName = GetUserInput("Enter last name: ");
@@ -100,7 +100,7 @@ namespace PeopleDatabase
                 Sex = Enum.Parse<Sex>(sexString),
             };
             
-            people.Add(person);
+            peopleTemporary.Add(person);
         }
 
         private static string GetUserInput(string prompt)
@@ -121,7 +121,8 @@ namespace PeopleDatabase
             }
             
             string databaseFileContent = File.ReadAllText(databaseFilePath);
-            var people = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
+            var peopelOriginal = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
+            var peopleTemporary = new List<Person>(peopelOriginal);
             
             while (true)
             {
@@ -133,22 +134,24 @@ namespace PeopleDatabase
                 switch (args[0])
                 {
                     case "add":
-                        AddPatient(people);
+                        AddPatient(peopleTemporary);
                         break;
                     case "list":
-                        ListPatients(args, databaseFileContent);
+                        ListPatients(args, peopelOriginal);
                         break;
                     case "edit":
-                        EditPatient(args, people);
+                        EditPatient(args, peopleTemporary);
                         break;
                     case "delete":
-                        DeletePatient(args, people);
+                        DeletePatient(args, peopleTemporary);
                         break;
                     case "commit":
-                        databaseFileContent = CommitChanges(people, databaseFilePath);
+                        databaseFileContent = CommitChanges(peopleTemporary, databaseFilePath);
+                        peopelOriginal.Clear();
+                        peopleTemporary.ForEach(val => { peopelOriginal.Add(val); });
                         break;
                     case "discard":
-                        people = DiscardChanges(databaseFileContent);
+                        peopleTemporary = DiscardChanges(databaseFileContent);
                         break;
                     case "exit":
                         return;
@@ -167,11 +170,12 @@ namespace PeopleDatabase
             return JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
         }
 
-        private static string CommitChanges(List<Person>? people, string databaseFilePath)
+        private static string CommitChanges(List<Person>? peopleTemporary, string databaseFilePath)
         {
             JsonSerializerOptions options = new() {WriteIndented = true};
-            string databaseFileContent = JsonSerializer.Serialize(people, options);
+            string databaseFileContent = JsonSerializer.Serialize(peopleTemporary, options);
             File.WriteAllText(databaseFilePath, contents: databaseFileContent);
+            
             return databaseFileContent;
         }
 
@@ -245,7 +249,7 @@ namespace PeopleDatabase
             }
         }
 
-        private static void ListPatients(string[] args, string databaseFileContent)
+        private static void ListPatients(string[] args, List<Person>originalPeople)
         {
             if (args.Length > 1)
             {
@@ -253,7 +257,6 @@ namespace PeopleDatabase
                 return;
             }
             
-            var originalPeople = JsonSerializer.Deserialize<List<Person>>(databaseFileContent) ?? new List<Person>();
             foreach (var person in originalPeople)
             {
                 Console.WriteLine($"\nID: {person.Id}");
